@@ -46,21 +46,21 @@ module controller(opcode, clk, reset, PCWrite, PCWriteCond, DMEMWrite, IRWrite,
   // ~~~~~~~~~~~~~~~~~~~ PARAMETERS ~~~~~~~~~~~~~~~~~~~ //
 
   // state parameters
-  parameter s0  = 4'd0;
-  parameter s1  = 4'd1;
-  parameter s2  = 4'd2;
-  parameter s3  = 4'd3;
-  parameter s4  = 4'd4;
-  parameter s5  = 4'd5;
-  parameter s6  = 4'd6;
-  parameter s7  = 4'd7;
-  parameter s8  = 4'd8;
-  parameter s9  = 4'd9;
-  parameter s10 = 4'd10;
-  parameter s11 = 4'd11;
-  parameter s12 = 4'd12;
+  parameter IF  = 4'd0;
+  parameter ID  = 4'd1;
+  parameter R_type_ex  = 4'd2;
+  parameter L_type_sign_ex  = 4'd3;
+  parameter L_type_zero_ex  = 4'd4;
+  parameter LWI_mem_read  = 4'd5;
+  parameter reg_write_back_aluout  = 4'd6;
+  parameter reg_write_back_mdr  = 4'd7;
+  parameter swi_mem_write  = 4'd8;
+  parameter reg_write_back_li  = 4'd9;
+  parameter reg_write_back_lui = 4'd10;
+  parameter branch = 4'd11;
+  parameter jump = 4'd12;
   parameter sR  = 4'd13;	// reset
-  parameter s14 = 4'd14;
+  parameter R1_output = 4'd14;
 
   // opcode[5:4] parameters
   parameter J  = 2'b00;	// Jump or NOP
@@ -103,7 +103,7 @@ module controller(opcode, clk, reset, PCWrite, PCWriteCond, DMEMWrite, IRWrite,
     else begin	// if reset signal is not set, check state at pos edge
       case (state)
 
-        // if in reset state (and reset signal not set), go to s0 (IF)
+        // if in reset state (and reset signal not set), go to IF (IF)
         sR: begin
           PCWrite 		<= 1;
           DMEMWrite 	<= 0;
@@ -115,11 +115,11 @@ module controller(opcode, clk, reset, PCWrite, PCWriteCond, DMEMWrite, IRWrite,
           RegWrite 		<= 0;
           PCWriteCond <= 0;
 
-          state <= s0;
+          state <= IF;
         end
 
-        // if in s0, go to s1 (ID)
-        s0: begin
+        // if in IF, go to ID (ID)
+        IF: begin
           PCWrite 		<= 0;
           DMEMWrite 	<= 0;
           IRWrite 		<= 0;
@@ -129,13 +129,13 @@ module controller(opcode, clk, reset, PCWrite, PCWriteCond, DMEMWrite, IRWrite,
           RegWrite 		<= 0;
           RegReadSel	<= 0;
 
-          state <= s1;
+          state <= ID;
         end
 
-        // if in s1 (ID) check opcode from instruction register to determine new state
-        s1: begin
+        // if in ID (ID) check opcode from instruction register to determine new state
+        ID: begin
           case (opcode[5:4])
-            // R-type opcode: go to s2 (R-type EX)
+            // R-type opcode: go to R_type_ex (R-type EX)
             R: begin
               PCWrite 		<= 0;
               DMEMWrite 	<= 0;
@@ -145,12 +145,12 @@ module controller(opcode, clk, reset, PCWrite, PCWriteCond, DMEMWrite, IRWrite,
               ALUSrcB 		<= 2'b00;
               RegWrite 		<= 0;
 
-              state <= s2;
+              state <= R_type_ex;
             end
 
             // J-type or NOP
             J: begin
-              // NOP: do nothing and go back to s0 (IF) for next instruction
+              // NOP: do nothing and go back to IF (IF) for next instruction
               if (opcode[3:0] == 4'b0000) begin
                 PCWrite 		<= 1;
                 DMEMWrite 	<= 0;
@@ -164,7 +164,7 @@ module controller(opcode, clk, reset, PCWrite, PCWriteCond, DMEMWrite, IRWrite,
 
                 state	<= 0;
               end
-              // Jump: go to s12 (jump completion)
+              // Jump: go to jump (jump completion)
               else begin
                 PCWrite 		<= 1;
                 DMEMWrite 	<= 0;
@@ -172,11 +172,11 @@ module controller(opcode, clk, reset, PCWrite, PCWriteCond, DMEMWrite, IRWrite,
                 PCSource 		<= 2'b10;
                 RegWrite 		<= 0;
 
-                state <= s12;
+                state <= jump;
               end
             end
 
-            // Branch: go to s14 ($R1 read)
+            // Branch: go to R1_output ($R1 read)
             BR: begin
               PCWrite 		<= 0;
               DMEMWrite 	<= 0;
@@ -187,12 +187,12 @@ module controller(opcode, clk, reset, PCWrite, PCWriteCond, DMEMWrite, IRWrite,
               RegWrite 		<= 0;
               RegReadSel	<= 1; // for R1
 
-              state <= s14;
+              state <= R1_output;
             end
 
             // I-type
             I: begin
-            // go to s3 (EX for ALU I-type with sign extended immediate)
+            // go to L_type_sign_ex (EX for ALU I-type with sign extended immediate)
               if ((opcode[3:0] == ADDI) || (opcode[3:0] == SUBI) || (opcode[3:0] == SLTI)) begin
                 PCWrite 		<= 0;
                 DMEMWrite 	<= 0;
@@ -202,10 +202,10 @@ module controller(opcode, clk, reset, PCWrite, PCWriteCond, DMEMWrite, IRWrite,
                 ALUSrcB 		<= 2'b10;
                 RegWrite 		<= 0;
 
-                state <= s3;
+                state <= L_type_sign_ex;
               end
 
-              // go to s4 (EX for ALU I-type with zero extended immediate)
+              // go to L_type_zero_ex (EX for ALU I-type with zero extended immediate)
               else if ((opcode[3:0] == ORI) || (opcode[3:0] == ANDI) || (opcode[3:0] == XORI)) begin
                 PCWrite 		<= 0;
                 DMEMWrite 	<= 0;
@@ -215,19 +215,19 @@ module controller(opcode, clk, reset, PCWrite, PCWriteCond, DMEMWrite, IRWrite,
                 ALUSrcB 		<= 2'b11;
                 RegWrite 		<= 0;
 
-                state <= s4;
+                state <= L_type_zero_ex;
               end
 
-                // go to s5 (MEM access for LWI)
+                // go to LWI_mem_read (MEM access for LWI)
               else if (opcode[3:0] == LWI) begin
                 PCWrite 		<= 0;
                 DMEMWrite 	<= 0;
                 IRWrite 		<= 0;
                 RegWrite 		<= 0;
 
-                state <= s5;
+                state <= LWI_mem_read;
               end
-              // go to s14 for R1 read
+              // go to R1_output for R1 read
               else if ((opcode[3:0] == LI) || (opcode[3:0] == LUI) || (opcode[3:0] == SWI))begin
                 PCWrite 		<= 0;
                 DMEMWrite 	<= 0;
@@ -238,58 +238,58 @@ module controller(opcode, clk, reset, PCWrite, PCWriteCond, DMEMWrite, IRWrite,
                 RegWrite 		<= 0;
                 RegReadSel	<= 1; // for R1
 
-                state <= s14;
+                state <= R1_output;
               end
             end
           endcase
         end
 
-        // if in s2 (R-type EX) go to s6 (ALUOp write backs)
-        s2: begin
+        // if in R_type_ex (R-type EX) go to reg_write_back_aluout (ALUOp write backs)
+        R_type_ex: begin
           PCWrite 		<= 0;
           DMEMWrite 	<= 0;
           IRWrite 		<= 0;
           MemtoReg 		<= 2'b00;
           RegWrite 		<= 1;
 
-          state <= s6;
+          state <= reg_write_back_aluout;
         end
 
-        // if in s3 (EX for Arithmetic I-type with sign extended Imm) go to s6 (ALUOp WB)
-        s3: begin
+        // if in L_type_sign_ex (EX for Arithmetic I-type with sign extended Imm) go to reg_write_back_aluout (ALUOp WB)
+        L_type_sign_ex: begin
           PCWrite 		<= 0;
           DMEMWrite 	<= 0;
           IRWrite 		<= 0;
           MemtoReg 		<= 2'b00;
           RegWrite 		<= 1;
 
-          state <= s6;
+          state <= reg_write_back_aluout;
         end
 
-        // if in s4 (EX for Arithmetic I-type with zero extended Imm) go to s6 (ALUOp WB)
-        s4: begin
+        // if in L_type_zero_ex (EX for Arithmetic I-type with zero extended Imm) go to reg_write_back_aluout (ALUOp WB)
+        L_type_zero_ex: begin
           PCWrite 		<= 0;
           DMEMWrite 	<= 0;
           IRWrite 		<= 0;
           MemtoReg 		<= 2'b00;
           RegWrite 		<= 1;
 
-          state <= s6;
+          state <= reg_write_back_aluout;
         end
 
-        // if in s5 (LWI MEM access) go to s7 (Reg File WB for LWI)
-        s5: begin
+        // if in LWI_mem_read (LWI MEM access) go to reg_write_back_mdr (Reg File WB for LWI)
+        LWI_mem_read: begin
           PCWrite 		<= 0;
           DMEMWrite 	<= 0;
           IRWrite 		<= 0;
           MemtoReg 		<= 2'b01;
           RegWrite 		<= 1;
 
-          state <= s7;
+          state <= reg_write_back_mdr;
         end
 
-        // if in s6 (ALUOut WB) go back to s0 (IF)
-        s6: begin
+        // if in reg_write_back_aluout (ALUOut WB) go back to IF (IF)
+        reg_write_back_aluout: begin
           PCWrite 		<= 1;
           DMEMWrite 	<= 0;
           IRWrite 		<= 1;
@@ -300,11 +300,11 @@ module controller(opcode, clk, reset, PCWrite, PCWriteCond, DMEMWrite, IRWrite,
           RegWrite 		<= 0;
           PCWriteCond <= 0;
 
-          state <= s0;
+          state <= IF;
         end
 
-        // if in s7 (Reg Gile WB for LWI) go to s0 (IF)
-        s7: begin
+        // if in reg_write_back_mdr (Reg Gile WB for LWI) go to IF (IF)
+        reg_write_back_mdr: begin
           PCWrite 		<= 1;
           DMEMWrite 	<= 0;
           IRWrite 		<= 1;
@@ -315,11 +315,11 @@ module controller(opcode, clk, reset, PCWrite, PCWriteCond, DMEMWrite, IRWrite,
           RegWrite 		<= 0;
           PCWriteCond <= 0;
 
-          state <= s0;
+          state <= IF;
         end
 
-        // if in s8 (MEM write for SWI) go to s0 (IF)
-        s8: begin
+        // if in swi_mem_write (MEM write for SWI) go to IF (IF)
+        swi_mem_write: begin
           PCWrite 		<= 1;
           DMEMWrite 	<= 0;
           IRWrite 		<= 1;
@@ -330,11 +330,11 @@ module controller(opcode, clk, reset, PCWrite, PCWriteCond, DMEMWrite, IRWrite,
           RegWrite 		<= 0;
           PCWriteCond <= 0;
 
-          state <= s0;
+          state <= IF;
         end
 
-        // if in s9 (Reg WB for LI) go to s0 (IF)
-        s9: begin
+        // if in reg_write_back_li (Reg WB for LI) go to IF (IF)
+        reg_write_back_li: begin
           PCWrite 		<= 1;
           DMEMWrite 	<= 0;
           IRWrite 		<= 1;
@@ -345,11 +345,11 @@ module controller(opcode, clk, reset, PCWrite, PCWriteCond, DMEMWrite, IRWrite,
           RegWrite 		<= 0;
           PCWriteCond <= 0;
 
-          state <= s0;
+          state <= IF;
         end
 
-        // if in s10 (Reg WB for LUI) go to s0 (IF)
-        s10: begin
+        // if in reg_write_back_lui (Reg WB for LUI) go to IF (IF)
+        reg_write_back_lui: begin
           PCWrite 		<= 1;
           DMEMWrite 	<= 0;
           IRWrite 		<= 1;
@@ -360,11 +360,11 @@ module controller(opcode, clk, reset, PCWrite, PCWriteCond, DMEMWrite, IRWrite,
           RegWrite 		<= 0;
           PCWriteCond <= 0;
 
-          state <= s0;
+          state <= IF;
         end
 
-        // if in s11 (Branch completion) go to s0 (IF)
-        s11: begin
+        // if in branch (Branch completion) go to IF (IF)
+        branch: begin
           PCWrite 		<= 1;
           DMEMWrite 	<= 0;
           IRWrite 		<= 1;
@@ -375,11 +375,11 @@ module controller(opcode, clk, reset, PCWrite, PCWriteCond, DMEMWrite, IRWrite,
           RegWrite 		<= 0;
           PCWriteCond <= 0;
 
-          state <= s0;
+          state <= IF;
         end
 
-        // if in s12 (Jump completion) go to s0 (IF)
-        s12: begin
+        // if in jump (Jump completion) go to IF (IF)
+        jump: begin
           PCWrite 		<= 1;
           DMEMWrite 	<= 0;
           IRWrite 		<= 1;
@@ -390,12 +390,12 @@ module controller(opcode, clk, reset, PCWrite, PCWriteCond, DMEMWrite, IRWrite,
           RegWrite 		<= 0;
           PCWriteCond <= 0;
 
-          state <= s0;
+          state <= IF;
         end
 
         // if in R1 read
-        s14: begin
-          // if Branch, go to s11, branch completion
+        R1_output: begin
+          // if Branch, go to branch, branch completion
           if (opcode[5:4] == BR) begin
             PCWrite 		<= 0;
             PCWriteCond <= 1;
@@ -408,9 +408,9 @@ module controller(opcode, clk, reset, PCWrite, PCWriteCond, DMEMWrite, IRWrite,
             RegWrite 		<= 0;
             RegReadSel	<= 1;
 
-            state <= s11;
+            state <= branch;
           end
-          // if LI, go to s9 LI WB
+          // if LI, go to reg_write_back_li LI WB
           if (opcode[3:0] == LI) begin
             PCWrite 		<= 0;
             DMEMWrite 	<= 0;
@@ -418,9 +418,9 @@ module controller(opcode, clk, reset, PCWrite, PCWriteCond, DMEMWrite, IRWrite,
             MemtoReg 		<= 2'b10;
             RegWrite 		<= 1;
 
-            state <= s9;
+            state <= reg_write_back_li;
           end
-          // if LUI, go to s10 LUI WB
+          // if LUI, go to reg_write_back_lui LUI WB
           else if (opcode[3:0] == LUI) begin
             PCWrite 		<= 0;
             DMEMWrite 	<= 0;
@@ -428,19 +428,19 @@ module controller(opcode, clk, reset, PCWrite, PCWriteCond, DMEMWrite, IRWrite,
             MemtoReg 		<= 2'b11;
             RegWrite 		<= 1;
 
-            state <= s10;
+            state <= reg_write_back_lui;
           end
-          // if SWI, go to s8, Mem Access
+          // if SWI, go to swi_mem_write, Mem Access
           else if (opcode[3:0] == SWI) begin
             PCWrite 		<= 0;
             DMEMWrite 	<= 1;
             IRWrite 		<= 0;
             RegWrite 		<= 0;
 
-            state <= s8;
+            state <= swi_mem_write;
           end
         end
-        // go to s0
+        // go to IF
         default: begin
           PCWrite 		<= 1;
           DMEMWrite 	<= 0;
@@ -452,7 +452,7 @@ module controller(opcode, clk, reset, PCWrite, PCWriteCond, DMEMWrite, IRWrite,
           RegWrite 		<= 0;
           PCWriteCond <= 0;
 
-          state <= s0;
+          state <= IF;
         end
       endcase
     end
