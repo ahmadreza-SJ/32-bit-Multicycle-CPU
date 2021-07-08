@@ -41,6 +41,7 @@ module datapath(clk, reset, PCWrite, PCWriteCond, IRWrite, DMEMWrite, RegWrite,
 
   // ~~~~~~~~~~~~~~~~~~~ WIRES ~~~~~~~~~~~~~~~~~~~ //
 
+
   // PC
   wire [word_size-1:0] PCin;
   wire [word_size-1:0] PCout;
@@ -50,6 +51,7 @@ module datapath(clk, reset, PCWrite, PCWriteCond, IRWrite, DMEMWrite, RegWrite,
 
   // Instruction Register
   wire [word_size-1:0] IRout;
+
   wire [15:0] immediate;
 
   // Data Memory
@@ -118,6 +120,7 @@ module datapath(clk, reset, PCWrite, PCWriteCond, IRWrite, DMEMWrite, RegWrite,
   // INSTRUCTION REGISTER
   holding_reg IR(IRout, IMout, IRWrite, clk, reset);
 
+
   // A and B
   holding_reg	A(Aout, read_data_1, 1'b1, clk, reset);
   holding_reg B(Bout, read_data_2, 1'b1, clk, reset);
@@ -153,4 +156,6 @@ module datapath(clk, reset, PCWrite, PCWriteCond, IRWrite, DMEMWrite, RegWrite,
 
   // ALU
   myALU	mainALU(ALU_wire, zero, sourceA, sourceB, ALUSel);
+
+
 endmodule

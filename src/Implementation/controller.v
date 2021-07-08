@@ -84,7 +84,6 @@ module controller(opcode, clk, reset, PCWrite, PCWriteCond, DMEMWrite, IRWrite,
 
   // control state machine
   always @(posedge clk) begin
-
     // check for reset signal. If set, write zero to PC and switch to Reset State on next CC.
     if (reset) begin
       PCWrite 		<= 1;
@@ -136,6 +135,7 @@ module controller(opcode, clk, reset, PCWrite, PCWriteCond, DMEMWrite, IRWrite,
         ID: begin
           case (opcode[5:4])
             // R-type opcode: go to R_type_ex (R-type EX)
+            // opcode[5:4] = 01 => Arithmetic/Logical R
             R: begin
               PCWrite 		<= 0;
               DMEMWrite 	<= 0;

@@ -37,7 +37,7 @@ module myALU(output_data, zero, sourceA, sourceB, ALUSel);
     case (ALUSel)
       4'h0: output_data = sourceA;
       4'h1: output_data = ~sourceA;
-      4'h2: output_data = sourceA + sourceB;
+      4'h2: output_data = sourceA + sourceB; // 4'h2 = 4'b0010
       4'h3: begin
         output_data = sourceA - sourceB;
         if ((sourceA - sourceB) == 0) begin
