@@ -27,8 +27,8 @@ module myALU(output_data, zero, sourceA, sourceB, ALUSel);
   input [word_size-1:0] sourceA, sourceB;
   input [3:0] ALUSel;
 
-  // outputs
-  output reg [word_size-1:0] output_data;
+  // outputs  
+  output reg [word_size-1:0] output_data = 0;
   output reg zero;
 
   // if any input changes, update output

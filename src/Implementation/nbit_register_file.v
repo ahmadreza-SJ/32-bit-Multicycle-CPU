@@ -38,7 +38,7 @@ module nbit_register_file(write_data,
 
     // for loop initializes all registers to 0, no need to rst
     integer i;
-    initial begin
+    initial begin        
         for (i = 0; i < 32; i = i + 1) begin
             register_file[i] = 32'd0;
         end
